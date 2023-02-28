@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?><wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:types="http://ffoms.ru/types/insuranceSuspendSchema" xmlns:tns="http://ffoms.ru/services/insuranceSuspendService" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" name="TFOMS_insuranceSuspendService" targetNamespace="http://ffoms.ru/services/insuranceSuspendService">
+
+    <wsdl:types>
+        <xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+            <xsd:import namespace="http://ffoms.ru/types/insuranceSuspendSchema" schemaLocation="../xsd/insuranceSuspendSchema.xsd"/>
+        </xsd:schema>
+    </wsdl:types>
+
+    <wsdl:message name="suspendOmsPolicyStartRequest">
+        <wsdl:part element="types:suspendOmsPolicyStartRequest" name="payload"/>
+    </wsdl:message>
+    <wsdl:message name="suspendOmsPolicyStartResponse">
+        <wsdl:part element="types:suspendOmsPolicyStartResponse" name="payload"/>
+    </wsdl:message>
+
+    <wsdl:message name="getStatusPollRequest">
+        <wsdl:part element="types:suspendOmsPolicyPollRequest" name="payload"/>
+    </wsdl:message>
+    <wsdl:message name="getStatusPollResponse">
+        <wsdl:part element="types:suspendOmsPolicyPollResponse" name="payload"/>
+    </wsdl:message>
+
+    <wsdl:portType name="TFOMS_PortType">
+        <wsdl:operation name="suspendOmsPolicyStart">
+            <wsdl:input message="tns:suspendOmsPolicyStartRequest"/>
+            <wsdl:output message="tns:suspendOmsPolicyStartResponse"/>
+        </wsdl:operation>
+        <wsdl:operation name="suspendOmsPolicyPoll">
+            <wsdl:input message="tns:getStatusPollRequest"/>
+            <wsdl:output message="tns:getStatusPollResponse"/>
+        </wsdl:operation>
+    </wsdl:portType>
+
+    <wsdl:binding name="TFOMS_SoapBinding" type="tns:TFOMS_PortType">
+        <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+        <wsdl:operation name="suspendOmsPolicyStart">
+            <soap:operation soapAction="http://ffoms.ru/services/tfoms/suspendOmsPolicy"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+        <wsdl:operation name="suspendOmsPolicyPoll">
+            <soap:operation soapAction="http://ffoms.ru/services/tfoms/getStatusPackage"/>
+            <wsdl:input>
+                <soap:body use="literal"/>
+            </wsdl:input>
+            <wsdl:output>
+                <soap:body use="literal"/>
+            </wsdl:output>
+        </wsdl:operation>
+    </wsdl:binding>
+
+    <wsdl:service name="TFOMS_Service">
+        <wsdl:documentation>TFOMS Service</wsdl:documentation>
+        <wsdl:port binding="tns:TFOMS_SoapBinding" name="TFOMS_Port">
+            <soap:address location="http://erzl-hotfix2:80/api/t-foms/integration/ws/wsdl/insuranceSuspendServiceWs"/>
+        </wsdl:port>
+    </wsdl:service>
+
+</wsdl:definitions>

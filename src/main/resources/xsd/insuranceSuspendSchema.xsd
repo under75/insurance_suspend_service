@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?><schema xmlns="http://www.w3.org/2001/XMLSchema" xmlns:commonTypes="http://ffoms.ru/types/commonTypes" xmlns:tns="http://ffoms.ru/types/insuranceSuspendSchema" elementFormDefault="qualified" targetNamespace="http://ffoms.ru/types/insuranceSuspendSchema" version="1.0">
+    <import namespace="http://ffoms.ru/types/commonTypes" schemaLocation="commonTypes.xsd"/>
+
+    <!-- метод suspendOmsPolicyStart запрос-->
+    <element name="suspendOmsPolicyStartRequest">
+        <annotation>
+            <documentation>Данные для запроса на приостановку действия полиса ОМС персон, призванных на срочную службу
+            </documentation>
+        </annotation>
+        <complexType>
+            <complexContent>
+                <extension base="commonTypes:CommonRequestType">
+                    <sequence>
+                        <element name="persons" type="tns:ListOfMilSvcPerson"/>
+                    </sequence>
+                </extension>
+            </complexContent>
+        </complexType>
+    </element>
+
+    <complexType name="ListOfMilSvcPerson">
+        <sequence>
+            <element maxOccurs="unbounded" name="person" type="tns:MilSvcPerson"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="MilSvcPerson">
+        <sequence>
+            <element minOccurs="0" name="oip" type="commonTypes:Oip"/>
+            <element name="localPersonIndex" type="string">
+                <annotation>
+                    <documentation>Идентификатор персоны в списке. Уникальный в рамках присланного документа
+                    </documentation>
+                </annotation>
+            </element>
+            <element name="personInfo" type="tns:PersonFioDr"/>
+            <element name="dudl" type="commonTypes:PersonDocIdentSerNum"/>
+            <element minOccurs="0" name="snils" type="commonTypes:SnilsType">
+                <annotation>
+                    <documentation>СНИЛС застрахованного лица.</documentation>
+                </annotation>
+            </element>
+            <element name="milSvc" type="tns:MilSvcData"/>
+        </sequence>
+    </complexType>
+
+    <complexType name="PersonFioDr">
+        <annotation>
+            <documentation>Данные ФИО и даты рождения</documentation>
+        </annotation>
+        <sequence>
+            <element name="surname" type="commonTypes:FIORussianLetters">
+                <annotation>
+                    <documentation>Фамилия</documentation>
+                </annotation>
+            </element>
+            <element name="firstName" type="commonTypes:FIORussianLetters">
+                <annotation>
+                    <documentation>Имя</documentation>
+                </annotation>
+            </element>
+            <element minOccurs="0" name="patronymic" type="commonTypes:FIORussianLetters">
+                <annotation>
+                    <documentation>Отчество</documentation>
+                </annotation>
+            </element>
+            <element name="birthDay" type="date">
+                <annotation>
+                    <documentation>Дата рождения</documentation>
+                </annotation>
+            </element>
+        </sequence>
+    </complexType>
+
+    <complexType name="MilSvcData">
+        <annotation>
+            <documentation>Сведения о сроке призыва на военную службу</documentation>
+        </annotation>
+        <sequence>
+            <element name="startDate" type="date">
+                <annotation>
+                    <documentation>Дата начала службы</documentation>
+                </annotation>
+            </element>
+            <element name="endDate" type="date">
+                <annotation>
+                    <documentation>Дата окончания службы</documentation>
+                </annotation>
+            </element>
+            <element name="termInMonths" type="int">
+                <annotation>
+                    <documentation>Срок службы в месяцах</documentation>
+                </annotation>
+            </element>
+        </sequence>
+    </complexType>
+
+    <element name="suspendOmsPolicyStartResponse">
+        <annotation>
+            <documentation>Данные ответа на запрос остановку действия полиса ОМС персон, призванных на срочную службу
+            </documentation>
+        </annotation>
+        <complexType>
+            <complexContent>
+                <extension base="commonTypes:AsyncStartResponse"/>
+            </complexContent>
+        </complexType>
+    </element>
+
+    <!-- метод suspendOmsPolicyPoll -->
+
+    <element name="suspendOmsPolicyPollRequest">
+        <annotation>
+            <documentation>Запрос статуса операции по остановке действия полисов персон, призванных на срочную службу
+            </documentation>
+        </annotation>
+        <complexType>
+            <complexContent>
+                <extension base="commonTypes:AsyncPollRequest"/>
+            </complexContent>
+        </complexType>
+    </element>
+
+
+    <element name="suspendOmsPolicyPollResponse">
+        <annotation>
+            <documentation>Ответ на запрос статуса операции по остановке действия полисов персон, призванных на срочную
+                службу
+            </documentation>
+        </annotation>
+        <complexType>
+            <complexContent>
+                <extension base="commonTypes:AsyncPollResponse">
+                    <sequence>
+                        <element maxOccurs="unbounded" minOccurs="0" name="milPersonResult" type="tns:MilPersonResult"/>
+                    </sequence>
+                </extension>
+            </complexContent>
+        </complexType>
+    </element>
+
+    <complexType name="MilPersonResult">
+        <sequence>
+            <element minOccurs="0" name="oip" type="commonTypes:Oip"/>
+            <element name="localPersonIndex" type="string">
+                <annotation>
+                    <documentation>Идентификатор персоны в списке. Уникальный в рамках присланного документа
+                    </documentation>
+                </annotation>
+            </element>
+            <element minOccurs="0" name="errors" type="commonTypes:ListOfErrors"/>
+        </sequence>
+    </complexType>
+
+</schema>
