@@ -1,6 +1,7 @@
 package ru.tfoms.insurancesuspend.entity;
 
 import java.io.Serializable;
+import java.util.Objects;
 
 public class MilPersonErrId implements Serializable{
 	private static final long serialVersionUID = 1L;
@@ -44,6 +45,23 @@ public class MilPersonErrId implements Serializable{
 	public void setNr(Integer nr) {
 		this.nr = nr;
 	}
-	
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(nr, personId, rid);
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		MilPersonErrId other = (MilPersonErrId) obj;
+		return Objects.equals(nr, other.nr) && Objects.equals(personId, other.personId)
+				&& Objects.equals(rid, other.rid);
+	}
 	
 }

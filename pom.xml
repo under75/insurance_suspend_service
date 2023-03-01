@@ -4,7 +4,7 @@
 
 	<groupId>ru.tfoms</groupId>
 	<artifactId>insurance-suspend-service-client</artifactId>
-	<version>1.0.0</version>
+	<version>1.0.1</version>
 	<packaging>jar</packaging>
 
 	<name>insurance-suspend-service-client</name>

@@ -2,6 +2,7 @@ package ru.tfoms.insurancesuspend.entity;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 public class MPIReqId implements Serializable {
 	private static final long serialVersionUID = 1L;
@@ -33,6 +34,23 @@ public class MPIReqId implements Serializable {
 
 	public void setDt(LocalDateTime dt) {
 		this.dt = dt;
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(dt, rid);
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		MPIReqId other = (MPIReqId) obj;
+		return Objects.equals(dt, other.dt) && Objects.equals(rid, other.rid);
 	}
 	
 }
