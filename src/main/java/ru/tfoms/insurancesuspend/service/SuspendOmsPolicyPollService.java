@@ -3,6 +3,7 @@ package ru.tfoms.insurancesuspend.service;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -24,9 +25,13 @@ import org.springframework.ws.support.MarshallingUtils;
 import ru.tfoms.insurancesuspend.entity.InsuranceSuspendRequestPoll;
 import ru.tfoms.insurancesuspend.entity.MPIError;
 import ru.tfoms.insurancesuspend.entity.MPIReq;
+import ru.tfoms.insurancesuspend.entity.MilPerson;
+import ru.tfoms.insurancesuspend.entity.MilPersonError;
 import ru.tfoms.insurancesuspend.repository.InsuranceSuspendRequestPollRepository;
 import ru.tfoms.insurancesuspend.repository.MPIErrorRepository;
 import ru.tfoms.insurancesuspend.repository.MPIReqRepository;
+import ru.tfoms.insurancesuspend.repository.MilPersonErrorRepository;
+import ru.tfoms.insurancesuspend.repository.MilPersonRepository;
 import ru.tfoms.schemas.person.MilPersonResult;
 import ru.tfoms.schemas.person.ResponseErrorData;
 import ru.tfoms.schemas.person.SuspendOmsPolicyPollRequest;
@@ -37,26 +42,37 @@ public class SuspendOmsPolicyPollService implements InsuranceSuspendService {
 	private final InsuranceSuspendRequestPollRepository requestPollRepository;
 	private final MPIReqRepository mpiReqRepository;
 	private final MPIErrorRepository errorRepository;
+	private final MilPersonRepository milPersonRepository;
+	private final MilPersonErrorRepository milPersonErrorRepository;
 	private final WebServiceTemplate template;
-	
-	protected enum Status {
-		ERROR,COMPLETED,NEW,PROCESSING
+
+	public enum Status {
+		ERROR, COMPLETED, NEW, PROCESSING
+	}
+
+	public static Collection<String> ignoredStatuses = new ArrayList<>();
+	static {
+		ignoredStatuses.add(Status.COMPLETED.name());
+		ignoredStatuses.add(Status.ERROR.name());
 	}
 
 	@Autowired
 	public SuspendOmsPolicyPollService(InsuranceSuspendRequestPollRepository requestPollRepository,
-			WebServiceTemplate template, MPIReqRepository mpiReqRepository, MPIErrorRepository errorRepository) {
+			WebServiceTemplate template, MPIReqRepository mpiReqRepository, MPIErrorRepository errorRepository,
+			MilPersonRepository milPersonRepository, MilPersonErrorRepository milPersonErrorRepository) {
 		super();
 		this.requestPollRepository = requestPollRepository;
 		this.mpiReqRepository = mpiReqRepository;
 		this.errorRepository = errorRepository;
+		this.milPersonRepository = milPersonRepository;
+		this.milPersonErrorRepository = milPersonErrorRepository;
 		this.template = template;
 	}
 
 //	@Scheduled(cron = "0 * * * * *")
-	@Scheduled(fixedDelay = 1, timeUnit = TimeUnit.MINUTES)
+	@Scheduled(fixedDelay = 15, timeUnit = TimeUnit.MINUTES)
 	public void process() {
-		Collection<InsuranceSuspendRequestPoll> requests = requestPollRepository.findByDtreqIsNull();//to do
+		Collection<InsuranceSuspendRequestPoll> requests = requestPollRepository.findByStatusIsNullOrStatusNotIn(ignoredStatuses);
 		requests.forEach(t -> {
 			SuspendOmsPolicyPollRequest request = new SuspendOmsPolicyPollRequest();
 			request.setExternalRequestId(t.getExtrid());
@@ -152,8 +168,33 @@ public class SuspendOmsPolicyPollService implements InsuranceSuspendService {
 
 				errorRepository.save(errEntity);
 			}
-		} else if (Status.valueOf(responce.getProcessingStatus().toUpperCase().trim()) == Status.COMPLETED){
+		} else if (Status.valueOf(responce.getProcessingStatus().toUpperCase().trim()) == Status.COMPLETED) {
 			List<MilPersonResult> milPersonResult = responce.getMilPersonResult();
+			milPersonResult.forEach(pr -> {
+				MilPerson milPers = new MilPerson();
+				milPers.setRid(t.getRid());
+				milPers.setPersonId(pr.getLocalPersonIndex());
+				milPers.setOip(pr.getOip());
+				milPers.setErr(pr.getErrors() != null);
+
+				milPersonRepository.save(milPers);
+				int nr = 0;
+				if (pr.getErrors() != null) {
+					Collection<ResponseErrorData> respErrors = pr.getErrors().getErrorItem();
+					for (ResponseErrorData respErr : respErrors) {
+						MilPersonError error = new MilPersonError();
+						error.setRid(t.getRid());
+						error.setPersonId(pr.getLocalPersonIndex());
+						error.setNr(++nr);
+						error.setCode(respErr.getCode());
+						error.setMessage(respErr.getMessage());
+						error.setTag(respErr.getTag());
+						error.setValue(respErr.getValue());
+
+						milPersonErrorRepository.save(error);
+					}
+				}
+			});
 		}
 
 	}

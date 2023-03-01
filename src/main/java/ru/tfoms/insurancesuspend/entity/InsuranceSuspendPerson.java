@@ -14,6 +14,8 @@ import javax.persistence.Table;
 @Table(name = "MPI_SUSPEND_OMS_POL_DATA", schema = "OMCOWNER")
 @IdClass(InsuranceSuspendPersonId.class)
 public class InsuranceSuspendPerson implements Serializable{
+	private static final long serialVersionUID = 1L;
+
 	@Id
 	@Column(name = "rid")
 	private Long rid;

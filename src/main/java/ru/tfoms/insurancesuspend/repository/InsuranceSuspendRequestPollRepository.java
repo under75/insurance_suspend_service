@@ -9,5 +9,7 @@ import ru.tfoms.insurancesuspend.entity.InsuranceSuspendRequestPoll;
 public interface InsuranceSuspendRequestPollRepository extends JpaRepository<InsuranceSuspendRequestPoll, Long> {
 
 	Collection<InsuranceSuspendRequestPoll> findByDtreqIsNull();
+	
+	Collection<InsuranceSuspendRequestPoll> findByStatusIsNullOrStatusNotIn(Collection<String> ignoredStatuses);   
 
 }

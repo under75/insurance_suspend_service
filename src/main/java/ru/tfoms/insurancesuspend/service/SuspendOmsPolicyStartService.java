@@ -65,7 +65,7 @@ public class SuspendOmsPolicyStartService implements InsuranceSuspendService {
 	}
 
 //	@Scheduled(cron = "0 * * * * *")
-	@Scheduled(fixedDelay = 1, timeUnit = TimeUnit.MINUTES)
+	@Scheduled(fixedDelay = 15, timeUnit = TimeUnit.MINUTES)
 	public void process() {
 		Collection<InsuranceSuspendRequest> requests = requestRepository.findByDtreqIsNull();
 		requests.forEach(t -> {
