@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+import java.util.UUID;
 
 import javax.xml.transform.TransformerException;
 
@@ -69,19 +69,17 @@ public class SuspendOmsPolicyPollService implements InsuranceSuspendService {
 		this.template = template;
 	}
 
-//	@Scheduled(cron = "0 * * * * *")
-	@Scheduled(fixedDelay = 15, timeUnit = TimeUnit.MINUTES)
+	@Scheduled(cron = "0 0/15 8-23 * * *")
 	public void process() {
 		Collection<InsuranceSuspendRequestPoll> requests = requestPollRepository.findByStatusIsNullOrStatusNotIn(ignoredStatuses);
+		Marshaller marshaller = template.getMarshaller();
+		Unmarshaller unmarshaller = template.getUnmarshaller();
 		requests.forEach(t -> {
 			SuspendOmsPolicyPollRequest request = new SuspendOmsPolicyPollRequest();
-			request.setExternalRequestId(t.getExtrid());
+			request.setExternalRequestId(UUID.randomUUID().toString());
 			request.setOpToken(t.getOpToken());
-
-			Marshaller marshaller = template.getMarshaller();
-			Unmarshaller unmarshaller = template.getUnmarshaller();
 			try {
-				SuspendOmsPolicyPollResponse responce = (SuspendOmsPolicyPollResponse) template
+				SuspendOmsPolicyPollResponse response = (SuspendOmsPolicyPollResponse) template
 						.sendAndReceive(new WebServiceMessageCallback() {
 
 							@Override
@@ -95,7 +93,7 @@ public class SuspendOmsPolicyPollService implements InsuranceSuspendService {
 								mpiReq.setRid(t.getRid());
 								mpiReq.setDt(LocalDateTime.now());
 								mpiReq.setReq(out.toByteArray());
-								mpiReq.setExtrid(t.getExtrid());
+								mpiReq.setExtrid(request.getExternalRequestId());
 
 								mpiReqRepository.save(mpiReq);
 							}
@@ -106,7 +104,7 @@ public class SuspendOmsPolicyPollService implements InsuranceSuspendService {
 									throws IOException, TransformerException {
 								ByteArrayOutputStream out = new ByteArrayOutputStream();
 								message.writeTo(out);
-								MPIReq mpiReq = mpiReqRepository.getByExtrid(t.getExtrid());
+								MPIReq mpiReq = mpiReqRepository.getByExtrid(request.getExternalRequestId());
 								mpiReq.setResp(out.toByteArray());
 
 								mpiReqRepository.save(mpiReq);
@@ -115,7 +113,7 @@ public class SuspendOmsPolicyPollService implements InsuranceSuspendService {
 							}
 						});
 
-				save(t, responce);
+				save(t, response);
 
 			} catch (SoapFaultClientException e) {
 				t.setDtreq(LocalDateTime.now());
@@ -129,7 +127,7 @@ public class SuspendOmsPolicyPollService implements InsuranceSuspendService {
 				errEntity.setCode(e.getClass().getSimpleName());
 				errEntity.setMessage(e.getFaultStringOrReason());
 				errEntity.setDtIns(LocalDateTime.now());
-				errEntity.setExtrid(t.getExtrid());
+				errEntity.setExtrid(request.getExternalRequestId());
 				errEntity.setType(SOAP_ERR);
 
 				errorRepository.save(errEntity);
@@ -137,20 +135,21 @@ public class SuspendOmsPolicyPollService implements InsuranceSuspendService {
 		});
 	}
 
-	private void save(InsuranceSuspendRequestPoll t, SuspendOmsPolicyPollResponse responce) {
-		if (responce.getErrors() != null && responce.getErrors().getErrorItem().size() == 1 && responce.getErrors()
+	private void save(InsuranceSuspendRequestPoll t, SuspendOmsPolicyPollResponse response) {
+		if (response.getErrors() != null && response.getErrors().getErrorItem().size() == 1 && response.getErrors()
 				.getErrorItem().stream().findAny().get().getCode().trim().equals(INTERNAL_SERVICE_ERROR)) {
 			// do nothing
 		} else {
 			t.setDtreq(LocalDateTime.now());
-			t.setHasError(responce.getErrors() != null ? true : false);
-			t.setStatus(responce.getProcessingStatus());
+			t.setHasError(response.getErrors() != null ? true : false);
+			t.setStatus(response.getProcessingStatus());
+			t.setExtrid(response.getExternalRequestId());
 
 			requestPollRepository.save(t);
 		}
 
-		if (responce.getErrors() != null) {
-			Collection<ResponseErrorData> errors = responce.getErrors().getErrorItem();
+		if (response.getErrors() != null) {
+			Collection<ResponseErrorData> errors = response.getErrors().getErrorItem();
 			int nr = 0;
 			for (ResponseErrorData err : errors) {
 				if (err.getCode().trim().equals(INTERNAL_SERVICE_ERROR))
@@ -163,13 +162,13 @@ public class SuspendOmsPolicyPollService implements InsuranceSuspendService {
 				errEntity.setTag(err.getTag());
 				errEntity.setValue(err.getValue());
 				errEntity.setDtIns(LocalDateTime.now());
-				errEntity.setExtrid(t.getExtrid());
+				errEntity.setExtrid(response.getExternalRequestId());
 				errEntity.setType(LOGIC_ERR);
 
 				errorRepository.save(errEntity);
 			}
-		} else if (Status.valueOf(responce.getProcessingStatus().toUpperCase().trim()) == Status.COMPLETED) {
-			List<MilPersonResult> milPersonResult = responce.getMilPersonResult();
+		} else if (Status.valueOf(response.getProcessingStatus().toUpperCase().trim()) == Status.COMPLETED) {
+			List<MilPersonResult> milPersonResult = response.getMilPersonResult();
 			milPersonResult.forEach(pr -> {
 				MilPerson milPers = new MilPerson();
 				milPers.setRid(t.getRid());

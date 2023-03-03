@@ -6,7 +6,6 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import javax.xml.datatype.DatatypeFactory;
 import javax.xml.transform.TransformerException;
@@ -64,20 +63,18 @@ public class SuspendOmsPolicyStartService implements InsuranceSuspendService {
 		this.template = template;
 	}
 
-//	@Scheduled(cron = "0 * * * * *")
-	@Scheduled(fixedDelay = 15, timeUnit = TimeUnit.MINUTES)
+	@Scheduled(cron = "0 0/15 8-23 * * *")
 	public void process() {
 		Collection<InsuranceSuspendRequest> requests = requestRepository.findByDtreqIsNull();
+		Marshaller marshaller = template.getMarshaller();
+		Unmarshaller unmarshaller = template.getUnmarshaller();
 		requests.forEach(t -> {
 			String extRid = UUID.randomUUID().toString();
 			SuspendOmsPolicyStartRequest request = new SuspendOmsPolicyStartRequest();
 			request.setPersons(getListOfMilSvcPerson(t));
 			request.setExternalRequestId(extRid);
-
-			Marshaller marshaller = template.getMarshaller();
-			Unmarshaller unmarshaller = template.getUnmarshaller();
 			try {
-				SuspendOmsPolicyStartResponse responce = (SuspendOmsPolicyStartResponse) template
+				SuspendOmsPolicyStartResponse response = (SuspendOmsPolicyStartResponse) template
 						.sendAndReceive(new WebServiceMessageCallback() {
 
 							@Override
@@ -112,7 +109,7 @@ public class SuspendOmsPolicyStartService implements InsuranceSuspendService {
 							}
 						});
 				
-				save(t, responce, extRid);
+				save(t, response, extRid);
 				
 			} catch (SoapFaultClientException e) {
 				t.setDtreq(LocalDateTime.now());
@@ -178,20 +175,20 @@ public class SuspendOmsPolicyStartService implements InsuranceSuspendService {
 	}
 
 	@Transactional
-	private void save(InsuranceSuspendRequest t, SuspendOmsPolicyStartResponse responce, String extRid) {
-		if (responce.getErrors() != null && responce.getErrors().getErrorItem().size() == 1 && responce.getErrors()
+	private void save(InsuranceSuspendRequest t, SuspendOmsPolicyStartResponse response, String extRid) {
+		if (response.getErrors() != null && response.getErrors().getErrorItem().size() == 1 && response.getErrors()
 				.getErrorItem().stream().findAny().get().getCode().trim().equals(INTERNAL_SERVICE_ERROR)) {
 			// do nothing
 		} else {
 			t.setDtreq(LocalDateTime.now());
-			t.setHasError(responce.getErrors() != null ? true : false);
-			t.setOpToken(responce.getOpToken());
+			t.setHasError(response.getErrors() != null ? true : false);
+			t.setOpToken(response.getOpToken());
 
 			requestRepository.save(t);
 		}
 
-		if (responce.getErrors() != null) {
-			Collection<ResponseErrorData> errors = responce.getErrors().getErrorItem();
+		if (response.getErrors() != null) {
+			Collection<ResponseErrorData> errors = response.getErrors().getErrorItem();
 			int nr = 0;
 			for (ResponseErrorData err : errors) {
 				if (err.getCode().trim().equals(INTERNAL_SERVICE_ERROR))
@@ -213,8 +210,7 @@ public class SuspendOmsPolicyStartService implements InsuranceSuspendService {
 			InsuranceSuspendRequestPoll requestPoll = new InsuranceSuspendRequestPoll();
 			requestPoll.setParentRid(t.getRid());
 			requestPoll.setDtIns(LocalDateTime.now());
-			requestPoll.setOpToken(responce.getOpToken());
-			requestPoll.setExtrid(UUID.randomUUID().toString());
+			requestPoll.setOpToken(response.getOpToken());
 			
 			requestPollRepository.save(requestPoll);
 		}
